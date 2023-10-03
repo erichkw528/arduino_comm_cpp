@@ -8,8 +8,6 @@
   <license>TODO: License declaration</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-  <depend> std_msgs </depend>
-    <depend>rclcpp</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
@@ -17,4 +15,12 @@
   <export>
     <build_type>ament_cmake</build_type>
   </export>
+
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+
+  <depend>roar_gokart_msgs</depend> <!-- ADDED -->
+  <depend>rapidjson</depend> <!-- ADDED -->
+
+
 </package>
