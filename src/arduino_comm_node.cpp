@@ -48,13 +48,9 @@ namespace roar {
             server_address.sin_family = AF_INET;
             server_address.sin_addr = arduino_ip;
             server_address.sin_port = htons(arduino_port);
-
-            // Initialize logger
-            printf("Initialize logger and set level\n");
-            //*_logger = rclcpp::get_logger("arduino_communicator_node");
             
             // Log message
-            // RCLCPP_INFO(get_logger(), "ArduinoCommunicatorNode has been initialized");
+            RCLCPP_INFO(get_logger(), "ArduinoCommunicatorNode has been initialized");
         }
         ArduinoCommunicatorNode::~ArduinoCommunicatorNode()
         {
@@ -97,7 +93,7 @@ namespace roar {
 
             } catch (const std::exception& e) {
                 // Log error
-                // RCLCPP_ERROR(get_logger(), "Failed to parse received data: %s", e.what());
+                RCLCPP_ERROR(get_logger(), "Failed to parse received data: %s", e.what());
             }
         }
 
