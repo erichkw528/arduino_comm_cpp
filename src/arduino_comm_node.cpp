@@ -3,7 +3,6 @@
 namespace roar {
     namespace arduino {
         
-        // Constructor
         ArduinoCommunicatorNode::ArduinoCommunicatorNode() : Node("arduino_comm_node"){
 
             // Declare ROS parameters for IP address, port, and timings
