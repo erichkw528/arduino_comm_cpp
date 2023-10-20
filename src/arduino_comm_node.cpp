@@ -3,13 +3,14 @@
 namespace roar {
     namespace arduino {
         
+        // Constructor
         ArduinoCommunicatorNode::ArduinoCommunicatorNode() : Node("arduino_comm_node"){
 
             // Declare ROS parameters for IP address, port, and timings
             this->declare_parameter("ip_address", "10.0.0.9");
             this->declare_parameter("port", 1883);
-            this->declare_parameter("get_state_period", 0.1);
-            this->declare_parameter("write_action_period", 0.1);
+            this->declare_parameter("get_state_period", 0.001);
+            this->declare_parameter("write_action_period", 0.001);
             this->declare_parameter("write_timeout", 0.1);
             this->declare_parameter("vehicle_status_header", "base_link");
 
@@ -48,7 +49,7 @@ namespace roar {
             server_address.sin_family = AF_INET;
             server_address.sin_addr = arduino_ip;
             server_address.sin_port = htons(arduino_port);
-            
+
             // Log message
             RCLCPP_INFO(get_logger(), "ArduinoCommunicatorNode has been initialized");
         }
@@ -56,45 +57,34 @@ namespace roar {
         {
             // Close socket
             close(sock);
-            printf("Destroy node\n");
         }
 
 
         // Function to get state data from Arduino
         void ArduinoCommunicatorNode::on_read_timer() {
-            // Send message to IP address and port
-            auto ip_address = this->get_parameter("ip_address").as_string();
 
-            // Send message via UDP
-            std::string message = "s";
+            // Send message via UDP (message = 's')
             sendto(sock, message.c_str(), message.size(), 0, (struct sockaddr*)&server_address, sizeof(server_address));            
-    
-            // Create buffer for received data
-            std::array<char, 2048> buffer;
+
 
             // Receive data from socket with a buffer size of 1024 bytes
             struct sockaddr_in client_address;
             socklen_t client_address_len = sizeof(client_address);
             ssize_t num_bytes_received = recvfrom(ArduinoCommunicatorNode::sock, buffer.data(), buffer.size(), 0, (struct sockaddr*)&client_address, &client_address_len);
 
+
+
             // Add null terminator to received message
             buffer[num_bytes_received] = '\0';
-
-
             try {
-                // Convert received data to string
-                auto data = std::string(buffer.data());
-
-                // Parse JSON data to vehicle state model
-                auto model = p_dataToVehicleState(data);
-
-                // Update latest state
+                auto model = p_dataToVehicleState(buffer.data());
                 *latest_state_ = model;
 
             } catch (const std::exception& e) {
-                // Log error
                 RCLCPP_ERROR(get_logger(), "Failed to parse received data: %s", e.what());
             }
+
+
         }
 
         // Callback function for sending control commands to Arduino
@@ -183,33 +173,23 @@ namespace roar {
             rapidjson::Document document;
             document.Parse(jsonData.c_str());
 
-            try {
-                // Check if the received JSON message is an object
-                if (!document.IsObject()) {
-                    throw std::runtime_error("JSON data is not an object.");
-                }
-                
-                // Parse individual fields and populate the model
-                model.is_auto = document["is_auto"].GetBool();
-                model.is_left_limiter_on = document["is_left_limiter_ON"].GetBool();
-                model.is_right_limiter_on = document["is_right_limiter_ON"].GetBool();
-                model.angle = document["angle"].GetDouble();
-                model.speed = document["speed"].GetDouble();
-                model.target_speed = document["target_speed"].GetDouble();
-                model.target_steering_angle = document["target_steering_angle"].GetDouble();
+            // Parse individual fields and populate the model
+            model.is_auto = document["is_auto"].GetBool();
+            model.is_left_limiter_on = document["is_left_limiter_ON"].GetBool();
+            model.is_right_limiter_on = document["is_right_limiter_ON"].GetBool();
+            model.angle = document["angle"].GetDouble();
+            model.speed = document["speed"].GetDouble();
+            model.target_speed = document["target_speed"].GetDouble();
+            model.target_steering_angle = document["target_steering_angle"].GetDouble();
 
-                const rapidjson::Value& currentActuation = document["current_actuation"];
-                model.actuation.throttle = currentActuation["throttle"].GetInt();
-                model.actuation.steering = currentActuation["steering"].GetDouble();
-                model.actuation.brake = currentActuation["brake"].GetInt();
-                model.actuation.reverse = currentActuation["reverse"].GetBool();
+            const rapidjson::Value& currentActuation = document["current_actuation"];
+            model.actuation.throttle = currentActuation["throttle"].GetDouble();
+            model.actuation.steering = currentActuation["steering"].GetDouble();
+            model.actuation.brake = currentActuation["brake"].GetDouble();
+            model.actuation.reverse = currentActuation["reverse"].GetBool();
 
-                // Publish the current state
-                p_publish_state(std::make_shared<roar_gokart_msgs::msg::VehicleStatus>(model)); 
-
-            } catch (const std::exception& e) {
-                throw std::runtime_error("Failed to parse JSON: " + std::string(e.what()));
-            }
+            // Publish the current state
+            p_publish_state(std::make_shared<roar_gokart_msgs::msg::VehicleStatus>(model)); 
 
             return model;
         }
